@@ -4,7 +4,6 @@ from PyQt5.Qt import Qt
 import xlrd
 
 import letter
-from letter import Letter
 from letterTable import LetterTable
 
 # will be drawn for
@@ -44,6 +43,8 @@ class MainWindow(QWidget):
             update_lbl(letterBank, str(temp_hand))
             # change table row color
             table.updateColor(hand, " ".join(cur_word).split())
+            # TODO:
+            #  1. update damage
         elif event.key() == Qt.Key_Backspace:
             if cur_word:
                 # update letter bank
@@ -54,9 +55,16 @@ class MainWindow(QWidget):
                 update_lbl(typed, cur_word)
                 # change table row color
                 table.updateColor(hand, " ".join(cur_word).split())
-        elif event.key() == Qt.Key_Enter:
+        elif event.key() == Qt.Key_Return:
+            # TODO:
+            #  1. check word is valid
+            #  2. deal damage + special effects
+            #     Lots of work needed to be done here (implementing each letter's unique abilities)
+            #  3. set hand to temp_hand
+            #  4. draw cards based on +draw cards (don't reshuffle deck)
+            #  5. decrement/increment word count
+
             print("entered")
-            # do smthn
 
 app = QApplication(sys.argv)
 w = MainWindow()
@@ -87,6 +95,13 @@ table.setMinimumHeight(720)
 table.updateTable(hand, letter_info)
 table.updateColor(hand, " ".join(cur_word).split())
 
+# TODO:
+#  1. Player healthbar
+#  2. Boss healthbar
+#  3. Damage display (current calculated damage with word that is currently typed)
+#  4. word_count display (denotes number of words that stil can be made)
+#  5. level up menu (3 panels, option 1: increase word length cap, option 2: increase starting hand size, option 3: increase health)
+#  6. shop keeper?
 w.show()
 
 sys.exit(app.exec_())
