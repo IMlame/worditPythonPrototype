@@ -3,41 +3,29 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QTableWidget, QTable
 from PyQt5.Qt import Qt
 import xlrd
 
-# deck
-from PyQt5.uic.properties import QtWidgets
-
+import letter
 from letter import Letter
 from letterTable import LetterTable
 
+# will be drawn for
 deck = " ".join("encyclopedia").upper().split()
-
+# currently in deck
+tempdeck = deck
 # hand
-hand = " ".join("abcdefghijklmnopqrstuvwxyz?").upper().split()
+hand = " ".join("aaaabbc").upper().split()
+# currently in hand (decreases in size as letters are typed, increases in size when backspace is pressed)
+temp_hand = hand.copy()
 
-# letter info
-letter_info = []
+# letter info from LetterData.xsl
+letter_info = letter.import_letter_data()
 
-tempHand = hand
+cur_word = ""
 
-curWord = ""
 
-# for labels
-def update_lbl(QLabel: QLabel, text: str):
-    QLabel.setText(text)
-    QLabel.adjustSize()
+def update_lbl(qlabel: QLabel, text: str):
+    qlabel.setText(text)
+    qlabel.adjustSize()
 
-# for data handling
-def create_letters():
-    wb = xlrd.open_workbook("LetterData.xls")
-    sheet = wb.sheet_by_index(0)
-
-    for i in range(1, 28):
-        letter_info.append(Letter(sheet.cell_value(i, 0).strip(),
-                                 sheet.cell_value(i, 1),
-                                 sheet.cell_value(i, 2),
-                                 sheet.cell_value(i, 3),
-                                 sheet.cell_value(i, 4)))
-    print(letter_info[10].damage)
 
 class MainWindow(QWidget):
     def __init__(self):
@@ -45,28 +33,34 @@ class MainWindow(QWidget):
         self.setFocusPolicy(Qt.StrongFocus)
 
     def keyPressEvent(self, event):
-        global curWord
+        global cur_word
         # handle word checking
-        if 32 <= event.key() <= 126 and chr(event.key()) in hand:
-            tempHand.remove(chr(event.key()))
-            curWord = curWord + chr(event.key())
-            update_lbl(typed, curWord)
-            update_lbl(letterBank, str(tempHand))
+        if 32 <= event.key() <= 126 and chr(event.key()) in temp_hand:
+            # update typed
+            cur_word = cur_word + chr(event.key())
+            update_lbl(typed, cur_word)
+            # update letter bank
+            temp_hand.remove(chr(event.key()))
+            update_lbl(letterBank, str(temp_hand))
+            # change table row color
+            table.updateColor(hand, " ".join(cur_word).split())
         elif event.key() == Qt.Key_Backspace:
-            if curWord:
-                hand.append(curWord[-1])
-                update_lbl(letterBank, str(tempHand))
-                curWord = curWord[0:-1]
-                update_lbl(typed, curWord)
+            if cur_word:
+                # update letter bank
+                temp_hand.append(cur_word[-1])
+                update_lbl(letterBank, str(temp_hand))
+                # update typed
+                cur_word = cur_word[0:-1]
+                update_lbl(typed, cur_word)
+                # change table row color
+                table.updateColor(hand, " ".join(cur_word).split())
         elif event.key() == Qt.Key_Enter:
             print("entered")
             # do smthn
 
-create_letters()
-
 app = QApplication(sys.argv)
 w = MainWindow()
-w.setGeometry(500, 500, 1000, 500)
+w.setGeometry(0, 0, 1280, 720)
 
 # labels
 typedLabel = QLabel(w)
@@ -87,7 +81,11 @@ letterBank.setText(str(hand))
 
 # table
 table = LetterTable(w)
+table.move(580, 0)
+table.setMinimumWidth(700)
+table.setMinimumHeight(720)
 table.updateTable(hand, letter_info)
+table.updateColor(hand, " ".join(cur_word).split())
 
 w.show()
 
