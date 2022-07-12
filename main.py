@@ -1,10 +1,8 @@
 import sys
-from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QTableWidget, QTableWidgetItem)
+from PyQt5.QtWidgets import (QApplication, QWidget, QLabel)
 from PyQt5.Qt import Qt
-import xlrd
-
-import letter
-from letterTable import LetterTable
+import Letter
+from LetterTable import LetterTable
 
 # will be drawn for
 deck = " ".join("encyclopedia").upper().split()
@@ -16,10 +14,13 @@ hand = " ".join("aaaabbc").upper().split()
 temp_hand = hand.copy()
 
 # letter info from LetterData.xsl
-letter_info = letter.import_letter_data()
+letter_info = Letter.import_letter_data()
 
 cur_word = ""
 
+def valid_word(word: str):
+    # return true or false depending on whether the variable word is a valid word or not
+    return True
 
 def update_lbl(qlabel: QLabel, text: str):
     qlabel.setText(text)
@@ -40,24 +41,25 @@ class MainWindow(QWidget):
             update_lbl(typed, cur_word)
             # update letter bank
             temp_hand.remove(chr(event.key()))
-            update_lbl(letterBank, str(temp_hand))
+            update_lbl(letter_bank, str(temp_hand))
             # change table row color
             table.updateColor(hand, " ".join(cur_word).split())
             # TODO:
-            #  1. update damage
+            #  1. update current damage indicator
         elif event.key() == Qt.Key_Backspace:
+            # if current typed word is not null...
             if cur_word:
-                # update letter bank
+                # update letter bank (add back last typed letter into temporary hand)
                 temp_hand.append(cur_word[-1])
-                update_lbl(letterBank, str(temp_hand))
-                # update typed
+                update_lbl(letter_bank, str(temp_hand))
+                # update typed (remove last letter typed from
                 cur_word = cur_word[0:-1]
                 update_lbl(typed, cur_word)
                 # change table row color
                 table.updateColor(hand, " ".join(cur_word).split())
         elif event.key() == Qt.Key_Return:
             # TODO:
-            #  1. check word is valid
+            #  1. check word is valid (see method valid_word, above)
             #  2. deal damage + special effects
             #     Lots of work needed to be done here (implementing each letter's unique abilities)
             #  3. set hand to temp_hand
@@ -70,24 +72,37 @@ app = QApplication(sys.argv)
 w = MainWindow()
 w.setGeometry(0, 0, 1280, 720)
 
-# labels
-typedLabel = QLabel(w)
-typedLabel.move(0, 0)
-typedLabel.setText("CURRENT WORD:")
+# LABELS
+typed_label = QLabel(w)
+typed_label.move(0, 0)
+typed_label.setText("CURRENT WORD:")
 
+# indicates current word that is being typed
 typed = QLabel(w)
 typed.move(125, 0)
 typed.setText("type something")
 
-letterLabel = QLabel(w)
-letterLabel.move(0, 25)
-letterLabel.setText("LETTER BANK: ")
 
-letterBank = QLabel(w)
-letterBank.move(125, 25)
-letterBank.setText(str(hand))
+letter_label = QLabel(w)
+letter_label.move(0, 25)
+letter_label.setText("LETTER BANK: ")
 
-# table
+# a live letter bank of available letters
+letter_bank = QLabel(w)
+letter_bank.move(125, 25)
+letter_bank.setText(str(hand))
+
+
+current_damage_label = QLabel(w)
+current_damage_label.move(0, 50)
+current_damage_label.setText("BASE DAMAGE:")
+
+# a live display of base damage (adding up "damage" attribute of each letter)
+current_damage = QLabel(w)
+current_damage.move(125, 50)
+current_damage.setText("0")
+
+# table, see LetterTable.py for table code
 table = LetterTable(w)
 table.move(580, 0)
 table.setMinimumWidth(700)
@@ -99,7 +114,7 @@ table.updateColor(hand, " ".join(cur_word).split())
 #  1. Player healthbar
 #  2. Boss healthbar
 #  3. Damage display (current calculated damage with word that is currently typed)
-#  4. word_count display (denotes number of words that stil can be made)
+#  4. word_count display (denotes number of words that still can be made)
 #  5. level up menu (3 panels, option 1: increase word length cap, option 2: increase starting hand size, option 3: increase health)
 #  6. shop keeper?
 w.show()

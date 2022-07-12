@@ -14,25 +14,18 @@ class LetterTable(QTableWidget):
         self.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
 
-    def updateTable(self, hand, letter_info):
+    def updateTable(self, hand: list, letter_info: dict):
         self.setRowCount(len(hand))
-
         for i in range(len(hand)):
-            index = -1
-            for j in range(len(letter_info)):
-
-                if letter_info[j].letter == str(hand[i]):
-                    index = j
-            self.setItem(i, 0, QTableWidgetItem(letter_info[index].letter))
-            self.setItem(i, 1, QTableWidgetItem(letter_info[index].damage))
-            self.setItem(i, 2, QTableWidgetItem(letter_info[index].word))
-            self.setItem(i, 3, QTableWidgetItem(letter_info[index].draw))
-            self.setItem(i, 4, QTableWidgetItem(letter_info[index].description))
+            if hand[i] in letter_info:
+                self.setItem(i, 0, QTableWidgetItem(letter_info[hand[i]].letter))
+                self.setItem(i, 1, QTableWidgetItem(letter_info[hand[i]].damage))
+                self.setItem(i, 2, QTableWidgetItem(letter_info[hand[i]].word))
+                self.setItem(i, 3, QTableWidgetItem(letter_info[hand[i]].draw))
+                self.setItem(i, 4, QTableWidgetItem(letter_info[hand[i]].description))
 
     def updateColor(self, hand, cur_word):
-        temp_cur_word = cur_word.copy()
         for i in range(len(hand)):
-            print(hand[i], "in", str(cur_word))
             if hand[i] in cur_word:
                 color = QtGui.QColor(0, 100, 0)
                 cur_word.remove(hand[i])
