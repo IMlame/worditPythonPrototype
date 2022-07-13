@@ -8,23 +8,23 @@ import random
 # will be drawn for
 f = open("deck.txt", "r")
 tempdeck = f.read()
+f.close()
 deck = tempdeck.split(",")
 # currently in deck
 # hand
 hand = random.sample(deck,5)
 # currently in hand (decreases in size as letters are typed, increases in size when backspace is pressed)
-temp_hand = hand.copy()
-print(tempdeck)
-print(deck)
 # letter info from LetterData.xsl
 letter_info = Letter.import_letter_data()
 
 cur_word = ""
+dis_cur_word = ""
 
 def valid_word(word: str):
     dicFile = open("dictionary.txt", "r")
-    dic = dicFile.read()
-    if word.upper() in dic:
+    lines = dicFile.read().split('\n')
+    dicFile.close()
+    if word.upper() in lines:
         print("cool")
         return True
     print("not cool")
@@ -42,36 +42,50 @@ class MainWindow(QWidget):
 
     def keyPressEvent(self, event):
         global cur_word
+        global dis_cur_word
         # handle word checking
-        if 32 <= event.key() <= 126 and chr(event.key()) in temp_hand:
+        if 32 <= event.key() <= 126 and (chr(event.key()) in hand):
             # update typed
             cur_word = cur_word + chr(event.key())
-            update_lbl(typed, cur_word)
-            # update letter bank
-            temp_hand.remove(chr(event.key()))
-            update_lbl(letter_bank, str(temp_hand))
+            dis_cur_word = dis_cur_word + chr(event.key())
+            update_lbl(typed, dis_cur_word)
+            hand.remove(chr(event.key()))
+            update_lbl(letter_bank, str(hand))
             # change table row color
-            table.updateColor(hand, " ".join(cur_word).split())
+            table.updateColor(hand, " ".join(dis_cur_word).split())
+            # TODO:
+            #  1. update current damage indicator
+        elif 32 <= event.key() <= 126 and not (chr(event.key()) in hand) and ("?" in hand):
+            # update typed
+            cur_word = cur_word + "?"
+            dis_cur_word = dis_cur_word + chr(event.key())
+            update_lbl(typed, dis_cur_word)
+            # update letter bank
+            hand.remove("?")
+            update_lbl(letter_bank, str(hand))
+            # change table row color
+            table.updateColor(hand, " ".join(dis_cur_word).split())
             # TODO:
             #  1. update current damage indicator
         elif event.key() == Qt.Key_Backspace:
             # if current typed word is not null...
             if cur_word:
                 # update letter bank (add back last typed letter into temporary hand)
-                temp_hand.append(cur_word[-1])
-                update_lbl(letter_bank, str(temp_hand))
+                hand.append(cur_word[-1])
+                update_lbl(letter_bank, str(hand))
                 # update typed (remove last letter typed from
                 cur_word = cur_word[0:-1]
-                update_lbl(typed, cur_word)
+                dis_cur_word = dis_cur_word[0:-1]
+                update_lbl(typed, dis_cur_word)
                 # change table row color
-                table.updateColor(hand, " ".join(cur_word).split())
+                table.updateColor(hand, " ".join(dis_cur_word).split())
         elif event.key() == Qt.Key_Return:
             # TODO:
-            valid_word("cool")
+            valid_word(cur_word)
             #  1. check word is valid (see method valid_word, above)
             #  2. deal damage + special effects
             #     Lots of work needed to be done here (implementing each letter's unique abilities)
-            #  3. set hand to temp_hand
+            #  3. set hand to hand
             #  4. draw cards based on +draw cards (don't reshuffle deck)
             #  5. decrement/increment word count
 
