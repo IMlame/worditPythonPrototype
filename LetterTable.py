@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem
 
 NUM_COLS = 6
 
+#test commit comment
 
 class LetterTable(QTableWidget):
     letter_order = []
