@@ -125,6 +125,17 @@ current_damage = QLabel(w)
 current_damage.move(125, 50)
 current_damage.setText("0")
 
+# current amount of words
+current_words_label = QLabel(w)
+current_words_label.move(0, 75)
+current_words_label.setText("WORDS:")
+
+# a live display of word amount left
+current_words = QLabel(w)
+current_words.move(125, 75)
+current_words.setText("1")
+
+
 # table, see LetterTable.py for table code
 table = LetterTable(w)
 table.move(580, 0)
