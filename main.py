@@ -128,10 +128,10 @@ letter_bank_label = label_maker("LETTER BANK:", str(hand))
 current_damage_label = label_maker("BASE DAMAGE:", "0")
 
 # a live display of additional words
-additional_words_label = label_maker("+WORD:", "1")
+additional_words_label = label_maker("+WORDS:", "1")
 
 # a live display of additional draws
-additional_draws_label = label_maker("+DRAW:", "1")
+additional_draws_label = label_maker("+DRAWS:", "1")
 
 # displays amount of words left that can be made
 available_words_label = label_maker("AVAILABLE WORDS:", "1")
