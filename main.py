@@ -3,24 +3,32 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QLabel)
 from PyQt5.Qt import Qt
 import Letter
 from LetterTable import LetterTable
+import random
 
 # will be drawn for
-deck = " ".join("encyclopedia").upper().split()
+f = open("deck.txt", "r")
+tempdeck = f.read()
+deck = tempdeck.split(",")
 # currently in deck
-tempdeck = deck
 # hand
-hand = " ".join("aaaabbc").upper().split()
+hand = random.sample(deck,5)
 # currently in hand (decreases in size as letters are typed, increases in size when backspace is pressed)
 temp_hand = hand.copy()
-
+print(tempdeck)
+print(deck)
 # letter info from LetterData.xsl
 letter_info = Letter.import_letter_data()
 
 cur_word = ""
 
 def valid_word(word: str):
-    # return true or false depending on whether the variable word is a valid word or not
-    return True
+    dicFile = open("dictionary.txt", "r")
+    dic = dicFile.read()
+    if word.upper() in dic:
+        print("cool")
+        return True
+    print("not cool")
+    return False
 
 def update_lbl(qlabel: QLabel, text: str):
     qlabel.setText(text)
@@ -59,6 +67,7 @@ class MainWindow(QWidget):
                 table.updateColor(hand, " ".join(cur_word).split())
         elif event.key() == Qt.Key_Return:
             # TODO:
+            valid_word("cool")
             #  1. check word is valid (see method valid_word, above)
             #  2. deal damage + special effects
             #     Lots of work needed to be done here (implementing each letter's unique abilities)
