@@ -23,4 +23,8 @@ class Healthbar:
         # painter.setBrush(QBrush(Qt.red, Qt.SolidPattern))
         painter.drawRect(self.x, self.y, self.width, self.height)
 
+    def damage(self, damage: int):
+        self.current_health = max(self.current_health - damage, 0)
+        self.paint()
+        return self.current_health == 0
 

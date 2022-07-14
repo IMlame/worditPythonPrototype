@@ -93,7 +93,7 @@ class MainWindow(QWidget):
                 self.cur_word = self.cur_word[0:-1]
                 self.dis_cur_word = self.dis_cur_word[0:-1]
         elif event.key() == Qt.Key_Return:
-            # if enemy is
+            # if valid word and you can still make a word
             if self.valid_word(self.dis_cur_word) and not self.available_words_label.text() == "0":
                 dmg, draw, word, base_dmg = self.dmg_calculation(self.cur_word)
                 word = max(word, 0)
@@ -106,6 +106,7 @@ class MainWindow(QWidget):
                 self.enemy_health.setValue(self.enemy_health.value() - dmg)
 
                 self.table.updateTable(self.hand, letter_info=self.letter_info)
+            # if no more words can be made
             elif self.available_words_label.text() == "0" or self.dis_cur_word == "":
                 self.update_lbl(qlabel=self.available_words_label, text="1")
                 self.discard_word()
