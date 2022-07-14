@@ -3,10 +3,12 @@ from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem
 
 NUM_COLS = 6
 
-#test commit comment
+
+# test commit comment
 
 class LetterTable(QTableWidget):
     letter_order = []
+
     def __init__(self, *__args):
         super().__init__(*__args)
         self.setColumnCount(NUM_COLS)
