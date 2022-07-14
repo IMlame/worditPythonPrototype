@@ -182,10 +182,10 @@ class MainWindow(QWidget):
         update_lbl(qlabel=letter_bank_label, text=str(hand))
 
         dmg, draw, word, base_dmg = dmg_calculation(cur_word)
-        current_damage_label.setText(str(base_dmg))
-        total_damage_label.setText(str(dmg))
-        additional_words_label.setText(str(word))
-        additional_draws_label.setText(str(draw))
+        update_lbl(current_damage_label, str(base_dmg))
+        update_lbl(total_damage_label, str(dmg))
+        update_lbl(additional_words_label, str(word))
+        update_lbl(additional_draws_label, str(draw))
         # change table row color
         table.updateColor(cur_word=cur_word)
 
