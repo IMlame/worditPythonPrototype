@@ -1,9 +1,12 @@
 import random
 
 from PyQt5.Qt import Qt
+from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QProgressBar, QLabel, QWidget
 
 import Letter
+from Enemy import Enemy
+from Healthbar import Healthbar
 from LetterTable import LetterTable
 
 LABEL_MAKER_Y_OFFSET_DISTANCE = 25
@@ -15,6 +18,7 @@ class MainWindow(QWidget):
         super().__init__()
         self.setGeometry(0, 0, 1280, 720)
         self.setFocusPolicy(Qt.StrongFocus)
+        self.max_length_word = 99999
         # will be drawn for
         f = open("deck.txt", "r")
         tempdeck = f.read()
@@ -36,6 +40,10 @@ class MainWindow(QWidget):
 
         self.cur_word = ""
         self.dis_cur_word = ""
+
+        # enemy object
+        self.enemy = Enemy(window=self, enemy_img="assets/enemy.jpg", img_height=200,
+                           healthbar=Healthbar(window=self, x=0, y=self.height()-50, width=480, height=50, initial_health=50, color=Qt.red))
 
         # LABELS
         self.label_num = 0
@@ -62,8 +70,6 @@ class MainWindow(QWidget):
 
         self.turn = self.label_maker("Turn:", "1")
 
-        self.enemy_health = self.label_maker2("Enemy Health", 40)
-
         # table, see LetterTable.py for table code
         self.table = LetterTable(self)
         self.table.move(480, 0)
@@ -74,7 +80,7 @@ class MainWindow(QWidget):
 
     def keyPressEvent(self, event):
         # handle word checking
-        if 65 <= event.key() <= 126:
+        if 65 <= event.key() <= 126 and len(self.cur_word) <= self.max_length_word:
             if chr(event.key()) in self.hand:
                 self.cur_word = self.cur_word + chr(event.key())
                 self.dis_cur_word = self.dis_cur_word + chr(event.key())
@@ -103,7 +109,9 @@ class MainWindow(QWidget):
                 self.hand.extend([self.deck.pop(random.randrange(len(self.deck))) for _ in range(min(draw, len(self.deck)))])
                 self.update_lbl(qlabel=self.letter_bank_label, text=str(self.hand))
 
-                self.enemy_health.setValue(self.enemy_health.value() - dmg)
+                # apply damage to enemy
+                self.enemy.damage(dmg)
+                self.update()
 
                 self.table.updateTable(self.hand, letter_info=self.letter_info)
             # if no more words can be made
@@ -119,7 +127,10 @@ class MainWindow(QWidget):
                 self.hand = self.deck[:(min(5, len(self.deck)))]
                 del self.deck[:len(self.hand)]
                 self.update_lbl(qlabel=self.letter_bank_label, text=str(self.hand))
-                self.enemy_health.setValue(self.enemy_health.value() + 5)
+
+                self.enemy.damage(-5)
+                self.update()
+
                 self.update_lbl(qlabel=self.turn, text=str(int(self.turn.text()) + 1))
 
                 self.table.updateTable(self.hand, letter_info=self.letter_info)
@@ -136,6 +147,10 @@ class MainWindow(QWidget):
         # change table row color
         self.table.updateColor(cur_word=self.cur_word)
 
+    def paintEvent(self, e):
+        self.enemy.update()
+
+    # HELPER METHODS
     def valid_word(self, word: str):
         dicFile = open("dictionary.txt", "r")
         lines = dicFile.read().split('\n')
@@ -212,22 +227,6 @@ class MainWindow(QWidget):
         self.label_num += 1
 
         return label
-
-    def label_maker2(self, title: str, initial_value: int):
-        self.label_num += 2
-        label_title = QLabel(self)
-        label_title.move(0, LABEL_MAKER_Y_OFFSET_DISTANCE * self.label_num)
-        label_title.setText(title)
-        self.label_num += 1
-
-        bar_title = QProgressBar(self)
-        bar_title.move(0, LABEL_MAKER_Y_OFFSET_DISTANCE * self.label_num)
-        bar_title.setRange(0, initial_value)
-        bar_title.setValue(initial_value)
-
-        self.label_num += 1
-
-        return bar_title
 # TODO:
 #  1. Player healthbar
 #  2. Boss healthbar
