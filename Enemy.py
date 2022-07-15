@@ -10,7 +10,6 @@ class Enemy:
         pixmap = QPixmap(enemy_img)
         image = QLabel(window)
         image.setPixmap(pixmap.scaledToWidth(img_height))
-
         image.move((healthbar.width-healthbar.x)/2 - image.width(), healthbar.y - img_height)
 
     def damage(self, damage: int):
@@ -18,3 +17,11 @@ class Enemy:
 
     def update(self):
         self.healthbar.paint()
+
+    def apply_status_effect(self, status_effect: str):
+        # keep track of status effects on enemy here
+        pass
+
+    def attack(self):
+        # return damage and status effects on player
+        pass
