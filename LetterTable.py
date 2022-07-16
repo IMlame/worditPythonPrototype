@@ -38,7 +38,7 @@ class LetterTable(QTableWidget):
                 color = QtGui.QColor(0, 100, 0)
                 letter_arr.remove(self.item(i, 0).text())
             else:
-                color = QtGui.QColor(0, 0, 0)
+                color = QtGui.QColor(100, 100, 100)
 
             for j in range(self.columnCount()):
                 self.item(i, j).setBackground(color)

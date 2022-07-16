@@ -10,7 +10,7 @@ class Enemy:
         pixmap = QPixmap(enemy_img)
         image = QLabel(window)
         image.setPixmap(pixmap.scaledToWidth(img_height))
-        image.move((healthbar.width-healthbar.x)/2 - image.width(), healthbar.y - img_height)
+        image.move(int((healthbar.width-healthbar.x)/2 - image.width()), int(healthbar.y - img_height))
 
     def damage(self, damage: int):
         self.healthbar.damage(damage=damage)

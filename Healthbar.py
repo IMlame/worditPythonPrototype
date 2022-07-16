@@ -17,7 +17,7 @@ class Healthbar:
     def paint(self):
         painter = QPainter(self.window)
         painter.setBrush(QBrush(self.color, Qt.FDiagPattern))
-        painter.drawRect(self.x, self.y, (self.current_health/self.initial_health)*self.width, self.height)
+        painter.drawRect(self.x, self.y, int((self.current_health/self.initial_health)*self.width), self.height)
 
         painter.setBrush(QBrush(Qt.NoBrush))
         painter.setPen(QPen(Qt.black, 5, Qt.SolidLine))
