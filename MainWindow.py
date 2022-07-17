@@ -2,12 +2,13 @@ import random
 
 from PyQt5.Qt import Qt
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QProgressBar, QLabel, QWidget
+from PyQt5.QtWidgets import QProgressBar, QLabel, QWidget, QPushButton
 
 import Letter
 from Enemy import Enemy
 from Healthbar import Healthbar
 from LetterTable import LetterTable
+from functools import partial
 
 LABEL_MAKER_Y_OFFSET_DISTANCE = 25
 LABEL_MAKER_TITLE_X_OFFSET = 140
@@ -68,7 +69,15 @@ class MainWindow(QWidget):
         # displays amount of words left that can be made
         self.available_words_label = self.label_maker("WORDS LEFT:", "1")
 
+        self.can_words = self.label_maker("WORDS YOU CAN DO:", "")
+
         self.turn = self.label_maker("Turn:", "1")
+
+        self.endTurn = self.label_maker2("End Turn")
+
+        self.endTurn.clicked.connect(partial(self.btnListener, "endTurn"))
+
+        self.multi_turn_effects=[]
 
         # table, see LetterTable.py for table code
         self.table = LetterTable(self)
@@ -77,6 +86,8 @@ class MainWindow(QWidget):
         self.table.setMinimumHeight(720)
         self.table.updateTable(hand=self.hand, letter_info=self.letter_info)
         self.table.updateColor(cur_word=self.cur_word)
+
+        self.update_lbl(qlabel=self.can_words, text=str(self.valid_word_inverse()[:3]))
 
     def keyPressEvent(self, event):
         # handle word checking
@@ -114,26 +125,7 @@ class MainWindow(QWidget):
                 self.update()
 
                 self.table.updateTable(self.hand, letter_info=self.letter_info)
-            # if no more words can be made
-            elif self.available_words_label.text() == "0" or self.dis_cur_word == "":
-                self.update_lbl(qlabel=self.available_words_label, text="1")
-                self.discard_word()
-                self.discard_hand()
-                self.discard.extend(self.temp_discard)
-                self.temp_discard = []
-                random.shuffle(self.discard)
-                self.deck.extend(self.discard)
-                self.discard = []
-                self.hand = self.deck[:(min(5, len(self.deck)))]
-                del self.deck[:len(self.hand)]
-                self.update_lbl(qlabel=self.letter_bank_label, text=str(self.hand))
-
-                self.enemy.damage(-5)
-                self.update()
-
-                self.update_lbl(qlabel=self.turn, text=str(int(self.turn.text()) + 1))
-
-                self.table.updateTable(self.hand, letter_info=self.letter_info)
+        self.update_lbl(qlabel=self.can_words, text=str(self.valid_word_inverse()[:3]))
 
         # update hand and letter bank labels
         self.update_lbl(qlabel=self.typed_label, text=self.dis_cur_word)
@@ -147,6 +139,37 @@ class MainWindow(QWidget):
         # change table row color
         self.table.updateColor(cur_word=self.cur_word)
 
+    def btnListener(self, button_name):
+        if button_name == "endTurn":
+            self.update_lbl(qlabel=self.available_words_label, text="1")
+            self.discard_word()
+            self.discard_hand()
+            self.discard.extend(self.temp_discard)
+            self.temp_discard = []
+            random.shuffle(self.discard)
+            self.deck.extend(self.discard)
+            self.discard = []
+            self.hand=[]
+            for i in self.multi_turn_effects:
+                if i == 'Q':
+                    self.hand.extend('Q')
+                    self.deck.remove("Q")
+                    self.hand.extend(self.deck[:(min(1, len(self.deck)))])
+                    del self.deck[:(min(1, len(self.deck)))]
+                    self.multi_turn_effects.remove('Q')
+            self.hand.extend(self.deck[:(min(5, len(self.deck)))])
+            del self.deck[:len(self.hand)]
+            self.update_lbl(qlabel=self.letter_bank_label, text=str(self.hand))
+
+            self.enemy.damage(-5)
+            self.update()
+
+            self.update_lbl(qlabel=self.turn, text=str(int(self.turn.text()) + 1))
+
+            self.table.updateTable(self.hand, letter_info=self.letter_info)
+
+            self.update_lbl(qlabel=self.can_words, text=str(self.valid_word_inverse()[:3]))
+
     def paintEvent(self, e):
         self.enemy.update()
 
@@ -159,16 +182,37 @@ class MainWindow(QWidget):
             return True
         return False
 
+    def valid_word_inverse(self):
+        dicFile = open("dictionary.txt", "r")
+        lines = dicFile.read().split('\n')
+        dicFile.close()
+        valid_words=[]
+        for word in [item for item in lines if item.startswith(self.dis_cur_word)]:
+            available_letters = self.hand[:]
+            blank_count = available_letters.count('?')
+
+            missed_counter = 0
+            for letter in word[len(self.dis_cur_word):]:
+                if letter in available_letters:         
+                    available_letters.remove(letter)
+                else:
+                    missed_counter += 1
+
+            # print word, missed_counter
+            if missed_counter <= blank_count:
+                valid_words.append(word)
+        return sorted(valid_words, key=len, reverse=True)
+
     def dmg_calculation(self, word: str):
         base_dmg = 0
         total_dmg = 0
         total_draw = 0
         total_word = 0
+        modifiers=1
         for count, i in enumerate(word):
             my_dmg = self.letter_info[i].damage
             my_draw = self.letter_info[i].draw
             my_word = self.letter_info[i].word
-            modifiers = 1
             # keep track of base damage
             base_dmg += self.letter_info[i].damage
 
@@ -188,15 +232,20 @@ class MainWindow(QWidget):
             elif self.letter_info[i].letter == 'Y':
                 if count != len(word) - 1:
                     modifiers += 1
-            for i in [item for item in self.letter_info[i].status_types if item.startswith('DMG')]:
-                modifiers += int(i[3:]) / 100
-            for i in [item for item in self.letter_info[i].status_types if item.startswith('END')]:
+            elif self.letter_info[i].letter == 'Q':
+                self.multi_turn_effects.append("Q")
+            """ To DO:
+                J
+                Statuses"""
+            for k in [item for item in self.letter_info[i].status_types if item.startswith('DMG')]:
+                modifiers += int(k[3:]) / 100
+            for j in [item for item in self.letter_info[i].status_types if item.startswith('END')]:
                 my_word -= 100000
-            total_dmg += my_dmg * modifiers
+            total_dmg += my_dmg
             total_draw += my_draw
             total_word += my_word
 
-        return [total_dmg, total_draw, total_word, base_dmg]
+        return [total_dmg*modifiers, total_draw, total_word, base_dmg]
 
     def update_lbl(self, qlabel: QLabel, text: str):
         qlabel.setText(text)
@@ -227,6 +276,16 @@ class MainWindow(QWidget):
         self.label_num += 1
 
         return label
+
+    def label_maker2(self, title: str):
+        label_title = QPushButton(self)
+        label_title.move(0, LABEL_MAKER_Y_OFFSET_DISTANCE * self.label_num)
+        label_title.setText(title)
+
+        self.label_num += 1
+
+        return label_title
+
 # TODO:
 #  1. Player healthbar
 #  2. Boss healthbar
