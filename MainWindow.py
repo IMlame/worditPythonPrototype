@@ -31,8 +31,6 @@ class MainWindow(QWidget):
         random.shuffle(self.deck)
         self.hand = self.deck[:(min(5, len(self.deck)))]
         del self.deck[:(len(self.hand))]
-        print(self.hand)
-        print(self.deck)
 
         # hand = random.sample(deck, 5)
         # currently in hand (decreases in size as letters are typed, increases in size when backspace is pressed)
@@ -112,10 +110,9 @@ class MainWindow(QWidget):
         elif event.key() == Qt.Key_Return:
             # if valid word and you can still make a word
             if self.valid_word(self.dis_cur_word) and not self.available_words_label.text() == "0":
-                dmg, draw, word, base_dmg = self.dmg_calculation(self.cur_word)
+                dmg, draw, word, base_dmg = self.dmg_calculation(self.cur_word,True)
                 word = max(word, 0)
                 self.discard_word()
-                print(dmg)
                 self.update_lbl(qlabel=self.available_words_label, text=str(int(self.available_words_label.text()) - 1 + word))
                 self.hand.extend([self.deck.pop(random.randrange(len(self.deck))) for _ in range(min(draw, len(self.deck)))])
                 self.update_lbl(qlabel=self.letter_bank_label, text=str(self.hand))
@@ -131,7 +128,7 @@ class MainWindow(QWidget):
         self.update_lbl(qlabel=self.typed_label, text=self.dis_cur_word)
         self.update_lbl(qlabel=self.letter_bank_label, text=str(self.hand))
 
-        dmg, draw, word, base_dmg = self.dmg_calculation(self.cur_word)
+        dmg, draw, word, base_dmg = self.dmg_calculation(self.cur_word,False)
         self.update_lbl(self.current_damage_label, str(base_dmg))
         self.update_lbl(self.total_damage_label, str(dmg))
         self.update_lbl(self.additional_words_label, str(word))
@@ -150,10 +147,15 @@ class MainWindow(QWidget):
             self.deck.extend(self.discard)
             self.discard = []
             self.hand=[]
+            print(self.multi_turn_effects)
+            print("multi")
             for i in self.multi_turn_effects:
+                print(i)
                 if i == 'Q':
+                    print(self.hand)
+                    print(self.deck)
                     self.hand.extend('Q')
-                    self.deck.remove("Q")
+                    self.deck.remove('Q')
                     self.hand.extend(self.deck[:(min(1, len(self.deck)))])
                     del self.deck[:(min(1, len(self.deck)))]
                     self.multi_turn_effects.remove('Q')
@@ -198,12 +200,11 @@ class MainWindow(QWidget):
                 else:
                     missed_counter += 1
 
-            # print word, missed_counter
             if missed_counter <= blank_count:
                 valid_words.append(word)
         return sorted(valid_words, key=len, reverse=True)
 
-    def dmg_calculation(self, word: str):
+    def dmg_calculation(self, word: str, actual: bool):
         base_dmg = 0
         total_dmg = 0
         total_draw = 0
@@ -232,7 +233,7 @@ class MainWindow(QWidget):
             elif self.letter_info[i].letter == 'Y':
                 if count != len(word) - 1:
                     modifiers += 1
-            elif self.letter_info[i].letter == 'Q':
+            elif self.letter_info[i].letter == 'Q' and actual:
                 self.multi_turn_effects.append("Q")
             """ To DO:
                 J
