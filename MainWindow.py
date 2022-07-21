@@ -10,6 +10,8 @@ from Healthbar import Healthbar
 from LetterTable import LetterTable
 from functools import partial
 
+from Player import Player
+
 LABEL_MAKER_Y_OFFSET_DISTANCE = 25
 LABEL_MAKER_TITLE_X_OFFSET = 140
 
@@ -42,8 +44,11 @@ class MainWindow(QWidget):
         self.cur_word = ""
         self.dis_cur_word = ""
 
+        # player object
+        self.player = Player(window=self, enemy_img="assets/player.jpg", img_height=150,
+                           healthbar=Healthbar(window=self, x=0, y=self.height() - 300, width=480, height=50, initial_health=50, color=Qt.blue))
         # enemy object
-        self.enemy = Enemy(window=self, enemy_img="assets/enemy.jpg", img_height=200,
+        self.enemy = Enemy(window=self, enemy_img="assets/enemy.png", img_height=150,
                            healthbar=Healthbar(window=self, x=0, y=self.height()-50, width=480, height=50, initial_health=50, color=Qt.red))
 
         # LABELS
@@ -131,11 +136,13 @@ class MainWindow(QWidget):
         self.update_lbl(qlabel=self.typed_label, text=self.dis_cur_word)
         self.update_lbl(qlabel=self.letter_bank_label, text=str(self.hand))
 
+        # update stats on current word
         dmg, draw, word, base_dmg = self.dmg_calculation(self.cur_word)
         self.update_lbl(self.current_damage_label, str(base_dmg))
         self.update_lbl(self.total_damage_label, str(dmg))
         self.update_lbl(self.additional_words_label, str(word))
         self.update_lbl(self.additional_draws_label, str(draw))
+
         # change table row color
         self.table.updateColor(cur_word=self.cur_word)
 
@@ -161,7 +168,7 @@ class MainWindow(QWidget):
             del self.deck[:len(self.hand)]
             self.update_lbl(qlabel=self.letter_bank_label, text=str(self.hand))
 
-            self.enemy.damage(-5)
+            self.player.damage(self.enemy.attack())
             self.update()
 
             self.update_lbl(qlabel=self.turn, text=str(int(self.turn.text()) + 1))
@@ -172,6 +179,7 @@ class MainWindow(QWidget):
 
     def paintEvent(self, e):
         self.enemy.update()
+        self.player.update()
 
     # HELPER METHODS
     def valid_word(self, word: str):
