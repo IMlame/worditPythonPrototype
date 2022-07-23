@@ -12,7 +12,7 @@ from functools import partial
 
 from Player import Player
 
-HINTS = False
+HINTS = True
 
 LABEL_MAKER_Y_OFFSET_DISTANCE = 25
 LABEL_MAKER_TITLE_X_OFFSET = 140
@@ -72,7 +72,6 @@ class MainWindow(QWidget):
                     dmg, draw, word, base_dmg, attributes = self.dmg_calculation(self.cur_word)
                     word = max(word, 0)
                     self.discard_word()
-                    print(dmg)
                     self.update_lbl(qlabel=self.available_words_label,
                                     text=str(int(self.available_words_label.text()) - 1 + word))
                     self.hand.extend(
@@ -157,15 +156,19 @@ class MainWindow(QWidget):
                 self.update_lbl(qlabel=self.can_words, text=str(self.valid_word_inverse()[:3]))
         elif button_name == "hand_button":
             self.starting_hand_count += 1
+            self.deck.append("1")
             self.reset_round()
         elif button_name == "health_button":
             self.base_health += 10 * self.enemy_num
+            self.deck.append("2")
             self.reset_round()
         elif button_name == "len_button":
             self.max_length_word += 1
+            self.deck.append("3")
             self.reset_round()
         elif button_name == "base_dmg_button":
             self.base_damage += 2 * self.enemy_num
+            self.deck.append("4")
             self.reset_round()
 
     def paintEvent(self, e):
@@ -189,6 +192,8 @@ class MainWindow(QWidget):
             valid_words = []
             for word in [item for item in lines if item.startswith(self.dis_cur_word)]:
                 available_letters = self.hand[:]
+                if len(word)>min(len(available_letters),self.max_length_word):
+                    continue
                 blank_count = available_letters.count('?')
 
                 missed_counter = 0
@@ -290,7 +295,7 @@ class MainWindow(QWidget):
 
         if img:
             button.adjustSize()
-            button.move(x + ((UPGRADE_BUTTON_X_SPACING / 2) - (button.width() / 2)), y)
+            button.move(int(x + ((UPGRADE_BUTTON_X_SPACING / 2) - (button.width() / 2))), int(y))
             button.hide()
 
             # image
@@ -298,7 +303,7 @@ class MainWindow(QWidget):
             image = QLabel(self)
             image.setPixmap(pixmap.scaledToWidth(img_height))
             image.adjustSize()
-            image.move(x + ((UPGRADE_BUTTON_X_SPACING / 2) - (image.width() / 2)), int(y - 150))
+            image.move(int(x + ((UPGRADE_BUTTON_X_SPACING / 2) - (image.width() / 2))), int(y - 150))
 
             # stat number label
             qlabel = QLabel(self)
@@ -329,8 +334,6 @@ class MainWindow(QWidget):
         random.shuffle(self.deck)
         self.hand = self.deck[:(min(self.starting_hand_count, len(self.deck)))]
         del self.deck[:(len(self.hand))]
-        print(self.hand)
-        print(self.deck)
 
         self.letter_info = Letter.import_letter_data()
 
@@ -413,21 +416,39 @@ class MainWindow(QWidget):
 
     def reset_round(self):
         self.enemy_num += 1
-        # will be drawn for
-        f = open("deck.txt", "r")
-        tempdeck = f.read()
-        f.close()
-        self.deck = tempdeck.split(",")
-        # currently in deck
+        self.update_lbl(qlabel=self.available_words_label, text="1")
+        self.discard_word()
+        self.discard_hand()
+        self.discard.extend(self.temp_discard)
         self.temp_discard = []
+        random.shuffle(self.discard)
+        self.deck.extend(self.discard)
         self.discard = []
-        random.shuffle(self.deck)
-        self.hand = self.deck[:(min(self.starting_hand_count, len(self.deck)))]
-        del self.deck[:(len(self.hand))]
-        print(self.hand)
-        print(self.deck)
+        self.hand = []
+        for i in self.multi_turn_effects:
+            if i == 'Q':
+                self.hand.extend('Q')
+                self.deck.remove("Q")
+                self.hand.extend(self.deck[:(min(1, len(self.deck)))])
+                del self.deck[:(min(1, len(self.deck)))]
+                self.multi_turn_effects.remove('Q')
+        self.hand.extend(self.deck[:(min(self.starting_hand_count, len(self.deck)))])
+        del self.deck[:len(self.hand)]
+        self.update_lbl(qlabel=self.letter_bank_label, text=str(self.hand))
 
-        self.letter_info = Letter.import_letter_data()
+        self.player.damage(self.enemy.attack())
+        # test if burn damage kills enemy
+        if self.enemy.is_dead():
+            self.show_buttons()
+
+        self.update()
+
+        self.update_lbl(qlabel=self.turn, text=str(int(self.turn.text()) + 1))
+
+        self.table.updateTable(self.hand, letter_info=self.letter_info)
+
+        if HINTS:
+            self.update_lbl(qlabel=self.can_words, text=str(self.valid_word_inverse()[:3]))
 
         self.cur_word = ""
         self.dis_cur_word = ""
