@@ -62,7 +62,7 @@ class Enemy:
             self.attribute_handler.clear_attributes()
 
         self.pixmap.setPixmap(QPixmap("assets/enemy.png").scaledToWidth(self.img_height))
-        return dmg
+        return int(dmg)
 
     def is_dead(self):
         return self.healthbar.current_health == 0
