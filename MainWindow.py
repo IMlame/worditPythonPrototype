@@ -1,7 +1,8 @@
 import random
 
 from PyQt5.Qt import Qt
-from PyQt5.QtWidgets import QLabel, QWidget, QPushButton
+from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import QLabel, QWidget, QPushButton, QGraphicsBlurEffect
 
 import Letter
 from Enemy import Enemy
@@ -11,162 +12,116 @@ from functools import partial
 
 from Player import Player
 
+HINTS = False
+
 LABEL_MAKER_Y_OFFSET_DISTANCE = 25
 LABEL_MAKER_TITLE_X_OFFSET = 140
 
 STATUS_EFFECTS = ["BURN", "FREZ", "GOLD", "HEAL", "PARA", "WEAK"]
 
+UPGRADE_BUTTON_X_SPACING = 200
+
 class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
+        self.deck, self.temp_discard, self.discard, self.hand, self.letter_info, \
+        self.cur_word, self.dis_cur_word, self.player, self.enemy, self.table, \
+        self.label_num, self.typed_label, self.letter_bank_label, self.current_damage_label, \
+        self.total_damage_label, self.additional_words_label, self.additional_draws_label, \
+        self.available_words_label, self.can_words, self.turn, self.endTurn, \
+        self.increase_hand, self.hand_label, self.increase_health, self.health_label, \
+        self.increase_word_len, self.len_label, self.increase_base_dmg, \
+        self.base_dmg_label = (None,) * 29
+
+        # player base stats
+        self.max_length_word = 4
+        self.base_health = 50
+        self.base_damage = 0
+        self.starting_hand_count = 5
+        self.enemy_num = 1
+
         self.setGeometry(0, 0, 1280, 720)
         self.setFocusPolicy(Qt.StrongFocus)
-        self.max_length_word = 4
-        # will be drawn for
-        f = open("deck.txt", "r")
-        tempdeck = f.read()
-        f.close()
-        self.deck = tempdeck.split(",")
-        # currently in deck
-        self.temp_discard = []
-        self.discard = []
-        random.shuffle(self.deck)
-        self.hand = self.deck[:(min(5, len(self.deck)))]
-        del self.deck[:(len(self.hand))]
-        print(self.hand)
-        print(self.deck)
 
-        # hand = random.sample(deck, 5)
-        # currently in hand (decreases in size as letters are typed, increases in size when backspace is pressed)
-        # letter info from LetterData.xsl
-        self.letter_info = Letter.import_letter_data()
-
-        self.cur_word = ""
-        self.dis_cur_word = ""
-
-        # player object
-        self.player = Player(window=self, enemy_img="assets/player.jpg", img_height=150,
-                             healthbar=Healthbar(window=self, x=0, y=self.height() - 300, width=480, height=50,
-                                                 initial_health=50, color=Qt.blue))
-        # enemy object
-        self.enemy = Enemy(window=self, enemy_img="assets/enemy.png", img_height=150,
-                           healthbar=Healthbar(window=self, x=0, y=self.height() - 50, width=480, height=50,
-                                               initial_health=50, color=Qt.red))
-
-        # LABELS
-        self.label_num = 0
-        # indicates current word that is being typed
-        self.typed_label = self.label_maker("CURRENT WORD:", "type something")
-
-        # a live letter bank of available letters
-        self.letter_bank_label = self.label_maker("LETTER BANK:", str(self.hand))
-
-        # a live display of base damage (adding up "damage" attribute of each letter)
-        self.current_damage_label = self.label_maker("BASE DAMAGE:", "0")
-
-        # a live display of total damage (adding up "damage" attribute of each letter)
-        self.total_damage_label = self.label_maker("TOTAL DAMAGE:", "0")
-
-        # a live display of additional words
-        self.additional_words_label = self.label_maker("+WORDS:", "0")
-
-        # a live display of additional draws
-        self.additional_draws_label = self.label_maker("+DRAWS:", "0")
-
-        # displays amount of words left that can be made
-        self.available_words_label = self.label_maker("WORDS LEFT:", "1")
-
-        self.can_words = self.label_maker("WORDS YOU CAN DO:", "")
-
-        self.turn = self.label_maker("Turn:", "1")
-
-        self.endTurn = self.label_maker2("End Turn")
-
-        self.endTurn.clicked.connect(partial(self.btnListener, "endTurn"))
-
-        self.multi_turn_effects = []
-
-        # table, see LetterTable.py for table code
-        self.table = LetterTable(self)
-        self.table.move(480, 0)
-        self.table.setMinimumWidth(820)
-        self.table.setMinimumHeight(720)
-        self.table.updateTable(hand=self.hand, letter_info=self.letter_info)
-        self.table.updateColor(cur_word=self.cur_word)
-
-        self.update_lbl(qlabel=self.can_words, text=str(self.valid_word_inverse()[:3]))
+        self.setup_round()
 
     def keyPressEvent(self, event):
-        # handle word checking
-        if 65 <= event.key() <= 126 and len(self.cur_word) < self.max_length_word:
-            if chr(event.key()) in self.hand:
-                self.cur_word = self.cur_word + chr(event.key())
-                self.dis_cur_word = self.dis_cur_word + chr(event.key())
-                self.hand.remove(chr(event.key()))
-            elif not (chr(event.key()) in self.hand) and ("?" in self.hand):
-                self.cur_word = self.cur_word + "?"
-                self.dis_cur_word = self.dis_cur_word + chr(event.key())
-                self.hand.remove("?")
+        if not self.player.is_dead() and not self.enemy.is_dead():
+            # handle word checking
+            if 65 <= event.key() <= 126 and len(self.cur_word) < self.max_length_word:
+                if chr(event.key()) in self.hand:
+                    self.cur_word = self.cur_word + chr(event.key())
+                    self.dis_cur_word = self.dis_cur_word + chr(event.key())
+                    self.hand.remove(chr(event.key()))
+                elif not (chr(event.key()) in self.hand) and ("?" in self.hand):
+                    self.cur_word = self.cur_word + "?"
+                    self.dis_cur_word = self.dis_cur_word + chr(event.key())
+                    self.hand.remove("?")
 
-        elif event.key() == Qt.Key_Backspace:
-            # if current typed word is not null...
-            if self.cur_word:
-                # update letter bank (add back last typed letter into temporary hand)
-                self.hand.append(self.cur_word[-1])
-                # update typed (remove last letter typed from
-                self.cur_word = self.cur_word[0:-1]
-                self.dis_cur_word = self.dis_cur_word[0:-1]
-        elif event.key() == Qt.Key_Return:
-            # if valid word and you can still make a word
-            if self.valid_word(self.dis_cur_word) and not self.available_words_label.text() == "0":
-                dmg, draw, word, base_dmg, attributes = self.dmg_calculation(self.cur_word)
-                word = max(word, 0)
-                self.discard_word()
-                print(dmg)
-                self.update_lbl(qlabel=self.available_words_label,
-                                text=str(int(self.available_words_label.text()) - 1 + word))
-                self.hand.extend(
-                    [self.deck.pop(random.randrange(len(self.deck))) for _ in range(min(draw, len(self.deck)))])
-                self.update_lbl(qlabel=self.letter_bank_label, text=str(self.hand))
+            elif event.key() == Qt.Key_Backspace:
+                # if current typed word is not null...
+                if self.cur_word:
+                    # update letter bank (add back last typed letter into temporary hand)
+                    self.hand.append(self.cur_word[-1])
+                    # update typed (remove last letter typed from
+                    self.cur_word = self.cur_word[0:-1]
+                    self.dis_cur_word = self.dis_cur_word[0:-1]
+            elif event.key() == Qt.Key_Return:
+                # if valid word and you can still make a word
+                if self.valid_word(self.dis_cur_word) and not self.available_words_label.text() == "0":
+                    dmg, draw, word, base_dmg, attributes = self.dmg_calculation(self.cur_word)
+                    word = max(word, 0)
+                    self.discard_word()
+                    print(dmg)
+                    self.update_lbl(qlabel=self.available_words_label,
+                                    text=str(int(self.available_words_label.text()) - 1 + word))
+                    self.hand.extend(
+                        [self.deck.pop(random.randrange(len(self.deck))) for _ in range(min(draw, len(self.deck)))])
+                    self.update_lbl(qlabel=self.letter_bank_label, text=str(self.hand))
 
-                # apply damage to enemy
-                self.enemy.damage(self.player.attack(dmg))
-                # apply status effects to enemy/player
-                for attribute in attributes:
-                    if "HEAL" in attribute:
-                        self.player.damage(-10 * int(attribute[-1]))
-                    elif "GOLD" in attribute:
-                        print("you got gold. yay!")
-                    else:
-                        self.enemy.apply_status_effect(attribute)
+                    # apply damage to enemy
+                    self.enemy.damage(self.player.attack(dmg))
 
-                self.update()
+                    # apply status effects to enemy/player
+                    for attribute in attributes:
+                        if "HEAL" in attribute:
+                            self.player.damage(-3 * int(attribute[-1]))
+                        elif "GOLD" in attribute:
+                            print("you got gold. yay!")
+                        else:
+                            self.enemy.apply_status_effect(attribute)
 
-                self.table.updateTable(self.hand, letter_info=self.letter_info)
+                    if self.enemy.is_dead():
+                        self.show_buttons()
 
-        if len(self.cur_word) == self.max_length_word:
-            self.typed_label.setStyleSheet("color: red")
-        else:
-            self.typed_label.setStyleSheet("")
+                    self.update()
 
-        self.update_lbl(qlabel=self.can_words, text=str(self.valid_word_inverse()[:3]))
+                    self.table.updateTable(self.hand, letter_info=self.letter_info)
 
-        # update hand and letter bank labels
-        self.update_lbl(qlabel=self.typed_label, text=self.dis_cur_word)
-        self.update_lbl(qlabel=self.letter_bank_label, text=str(self.hand))
+            if len(self.cur_word) == self.max_length_word:
+                self.typed_label.setStyleSheet("color: red")
+            else:
+                self.typed_label.setStyleSheet("")
 
-        # update stats on current word
-        dmg, draw, word, base_dmg, attributes = self.dmg_calculation(self.cur_word)
-        self.update_lbl(self.current_damage_label, str(base_dmg))
-        self.update_lbl(self.total_damage_label, str(dmg))
-        self.update_lbl(self.additional_words_label, str(word))
-        self.update_lbl(self.additional_draws_label, str(draw))
+            if HINTS:
+                self.update_lbl(qlabel=self.can_words, text=str(self.valid_word_inverse()[:3]))
 
-        # change table row color
-        self.table.updateColor(cur_word=self.cur_word)
+            # update hand and letter bank labels
+            self.update_lbl(qlabel=self.typed_label, text=self.dis_cur_word)
+            self.update_lbl(qlabel=self.letter_bank_label, text=str(self.hand))
+
+            # update stats on current word
+            dmg, draw, word, base_dmg, attributes = self.dmg_calculation(self.cur_word)
+            self.update_lbl(self.current_damage_label, str(base_dmg))
+            self.update_lbl(self.total_damage_label, str(dmg))
+            self.update_lbl(self.additional_words_label, str(word))
+            self.update_lbl(self.additional_draws_label, str(draw))
+
+            # change table row color
+            self.table.updateColor(cur_word=self.cur_word)
 
     def btnListener(self, button_name):
-        if button_name == "endTurn":
+        if button_name == "End Turn" and not self.player.is_dead() and not self.enemy.is_dead():
             self.update_lbl(qlabel=self.available_words_label, text="1")
             self.discard_word()
             self.discard_hand()
@@ -183,18 +138,35 @@ class MainWindow(QWidget):
                     self.hand.extend(self.deck[:(min(1, len(self.deck)))])
                     del self.deck[:(min(1, len(self.deck)))]
                     self.multi_turn_effects.remove('Q')
-            self.hand.extend(self.deck[:(min(5, len(self.deck)))])
+            self.hand.extend(self.deck[:(min(self.starting_hand_count, len(self.deck)))])
             del self.deck[:len(self.hand)]
             self.update_lbl(qlabel=self.letter_bank_label, text=str(self.hand))
 
             self.player.damage(self.enemy.attack())
+            # test if burn damage kills enemy
+            if self.enemy.is_dead():
+                self.show_buttons()
+
             self.update()
 
             self.update_lbl(qlabel=self.turn, text=str(int(self.turn.text()) + 1))
 
             self.table.updateTable(self.hand, letter_info=self.letter_info)
 
-            self.update_lbl(qlabel=self.can_words, text=str(self.valid_word_inverse()[:3]))
+            if HINTS:
+                self.update_lbl(qlabel=self.can_words, text=str(self.valid_word_inverse()[:3]))
+        elif button_name == "hand_button":
+            self.starting_hand_count += 1
+            self.reset_round()
+        elif button_name == "health_button":
+            self.base_health += 10 * self.enemy_num
+            self.reset_round()
+        elif button_name == "len_button":
+            self.max_length_word += 1
+            self.reset_round()
+        elif button_name == "base_dmg_button":
+            self.base_damage += 2 * self.enemy_num
+            self.reset_round()
 
     def paintEvent(self, e):
         self.enemy.update()
@@ -210,29 +182,30 @@ class MainWindow(QWidget):
         return False
 
     def valid_word_inverse(self):
-        dicFile = open("dictionary.txt", "r")
-        lines = dicFile.read().split('\n')
-        dicFile.close()
-        valid_words = []
-        for word in [item for item in lines if item.startswith(self.dis_cur_word)]:
-            available_letters = self.hand[:]
-            blank_count = available_letters.count('?')
+        if HINTS:
+            dicFile = open("dictionary.txt", "r")
+            lines = dicFile.read().split('\n')
+            dicFile.close()
+            valid_words = []
+            for word in [item for item in lines if item.startswith(self.dis_cur_word)]:
+                available_letters = self.hand[:]
+                blank_count = available_letters.count('?')
 
-            missed_counter = 0
-            for letter in word[len(self.dis_cur_word):]:
-                if letter in available_letters:
-                    available_letters.remove(letter)
-                else:
-                    missed_counter += 1
+                missed_counter = 0
+                for letter in word[len(self.dis_cur_word):]:
+                    if letter in available_letters:
+                        available_letters.remove(letter)
+                    else:
+                        missed_counter += 1
 
-            # print word, missed_counter
-            if missed_counter <= blank_count:
-                valid_words.append(word)
-        return sorted(valid_words, key=len, reverse=True)
+                # print word, missed_counter
+                if missed_counter <= blank_count:
+                    valid_words.append(word)
+            return sorted(valid_words, key=len, reverse=True)
 
     # played should only be true when
     def dmg_calculation(self, word: str):
-        base_dmg = 0
+        base_dmg = self.base_damage
         total_dmg = 0
         total_draw = 0
         total_word = 0
@@ -309,14 +282,192 @@ class MainWindow(QWidget):
 
         return label
 
-    def label_maker2(self, title: str):
-        label_title = QPushButton(self)
-        label_title.move(0, LABEL_MAKER_Y_OFFSET_DISTANCE * self.label_num)
-        label_title.setText(title)
+    def button_maker(self, title: str, button_name: str, x: int, y: int, img="", img_height=0, start_value=0):
+        button = QPushButton(self)
+        button.setText(title)
+        button.clicked.connect(partial(self.btnListener, button_name))
+        button.move(x, y)
 
-        self.label_num += 1
+        if img:
+            button.adjustSize()
+            button.move(x + ((UPGRADE_BUTTON_X_SPACING / 2) - (button.width() / 2)), y)
+            button.hide()
 
-        return label_title
+            # image
+            pixmap = QPixmap(img)
+            image = QLabel(self)
+            image.setPixmap(pixmap.scaledToWidth(img_height))
+            image.adjustSize()
+            image.move(x + ((UPGRADE_BUTTON_X_SPACING / 2) - (image.width() / 2)), int(y - 150))
+
+            # stat number label
+            qlabel = QLabel(self)
+            qlabel.move(image.x() + 4, image.y() + 2)
+            qlabel.setText(str(start_value))
+            qlabel.setStyleSheet("font-size: 20px")
+            qlabel.adjustSize()
+
+            return button, qlabel
+
+        return button
+
+    def show_buttons(self):
+        self.increase_hand.show()
+        self.increase_health.show()
+        self.increase_word_len.show()
+        self.increase_base_dmg.show()
+
+    def setup_round(self):
+        # will be drawn for
+        f = open("deck.txt", "r")
+        tempdeck = f.read()
+        f.close()
+        self.deck = tempdeck.split(",")
+        # currently in deck
+        self.temp_discard = []
+        self.discard = []
+        random.shuffle(self.deck)
+        self.hand = self.deck[:(min(self.starting_hand_count, len(self.deck)))]
+        del self.deck[:(len(self.hand))]
+        print(self.hand)
+        print(self.deck)
+
+        self.letter_info = Letter.import_letter_data()
+
+        self.cur_word = ""
+        self.dis_cur_word = ""
+
+        # player object
+        self.player = Player(window=self, enemy_img="assets/player.jpg", img_height=150,
+                             healthbar=Healthbar(window=self, x=0, y=self.height() - 300, width=480, height=50,
+                                                 initial_health=self.base_health, color=Qt.blue))
+        # enemy object
+        self.enemy = Enemy(window=self, enemy_img="assets/enemy.png", img_height=150,
+                           healthbar=Healthbar(window=self, x=0, y=self.height() - 50, width=480, height=50,
+                                               initial_health=1 * self.enemy_num, color=Qt.red), base_dmg = 5 * self.enemy_num)
+
+        # table, see LetterTable.py for table code
+        self.table = LetterTable(self)
+        self.table.move(480, 0)
+        self.table.setMinimumWidth(820)
+        self.table.setMinimumHeight(472)
+        self.table.updateTable(hand=self.hand, letter_info=self.letter_info)
+        self.table.updateColor(cur_word=self.cur_word)
+
+        # LABELS
+        self.label_num = 0
+        # indicates current word that is being typed
+        self.typed_label = self.label_maker("CURRENT WORD:", "type something")
+
+        # a live letter bank of available letters
+        self.letter_bank_label = self.label_maker("LETTER BANK:", str(self.hand))
+
+        # a live display of base damage (adding up "damage" attribute of each letter)
+        self.current_damage_label = self.label_maker("BASE DAMAGE:", "0")
+
+        # a live display of total damage (adding up "damage" attribute of each letter)
+        self.total_damage_label = self.label_maker("TOTAL DAMAGE:", "0")
+
+        # a live display of additional words
+        self.additional_words_label = self.label_maker("+WORDS:", "0")
+
+        # a live display of additional draws
+        self.additional_draws_label = self.label_maker("+DRAWS:", "0")
+
+        # displays amount of words left that can be made
+        self.available_words_label = self.label_maker("WORDS LEFT:", "1")
+
+        self.can_words = self.label_maker("WORDS YOU CAN DO:", "")
+
+        self.turn = self.label_maker("Turn:", "1")
+
+        self.endTurn = self.button_maker(title="End Turn", button_name="End Turn", x=0, y=LABEL_MAKER_Y_OFFSET_DISTANCE * self.label_num)
+
+        self.increase_hand, self.hand_label = self.button_maker(title="Starting hand +1", button_name="hand_button", x=self.table.x(),
+                                                                y=self.height() - 50,
+                                                                img="assets/hand.png", img_height=125,
+                                                                start_value=self.starting_hand_count)
+
+        self.increase_health, self.health_label = self.button_maker(title="Base health +" + str(10 * self.enemy_num),
+                                                                    button_name="health_button", x=self.table.x() + UPGRADE_BUTTON_X_SPACING * 1,
+                                                                    y=self.height() - 50,
+                                                                    img="assets/health.png", img_height=125,
+                                                                    start_value=self.base_health)
+
+        self.increase_word_len, self.len_label = self.button_maker(title="Word len +1",
+                                                                   button_name="len_button", x=self.table.x() + UPGRADE_BUTTON_X_SPACING * 2,
+                                                                   y=self.height() - 50,
+                                                                   img="assets/length.png", img_height=125,
+                                                                   start_value=self.max_length_word)
+
+        self.increase_base_dmg, self.base_dmg_label = self.button_maker(title="Base damage +" + str(2 * self.enemy_num),
+                                                                        button_name="base_dmg_button", x=self.table.x() + UPGRADE_BUTTON_X_SPACING * 3,
+                                                                        y=self.height() - 50,
+                                                                        img="assets/damage.png", img_height=125,
+                                                                        start_value=self.base_damage)
+
+        self.multi_turn_effects = []
+
+        if HINTS:
+            self.update_lbl(qlabel=self.can_words, text=str(self.valid_word_inverse()[:3]))
+
+    def reset_round(self):
+        self.enemy_num += 1
+        # will be drawn for
+        f = open("deck.txt", "r")
+        tempdeck = f.read()
+        f.close()
+        self.deck = tempdeck.split(",")
+        # currently in deck
+        self.temp_discard = []
+        self.discard = []
+        random.shuffle(self.deck)
+        self.hand = self.deck[:(min(self.starting_hand_count, len(self.deck)))]
+        del self.deck[:(len(self.hand))]
+        print(self.hand)
+        print(self.deck)
+
+        self.letter_info = Letter.import_letter_data()
+
+        self.cur_word = ""
+        self.dis_cur_word = ""
+
+        self.table.updateTable(hand=self.hand, letter_info=self.letter_info)
+        self.table.updateColor(cur_word=self.cur_word)
+
+        self.player.reset(self.base_health)
+        self.enemy.reset(new_max_health=25 * self.enemy_num, new_base_damage=5 * self.enemy_num)
+
+        # update things that change when the round resets
+        self.update_lbl(self.current_damage_label, str(self.base_damage))
+        self.update_lbl(self.letter_bank_label, str(self.hand))
+        self.update_lbl(self.available_words_label, str(1))
+
+        # update display numbers
+        self.update_lbl(self.hand_label, str(self.starting_hand_count))
+        self.update_lbl(self.health_label, str(self.base_health))
+        self.update_lbl(self.len_label, str(self.max_length_word))
+        self.update_lbl(self.base_dmg_label, str(self.base_damage))
+
+        # update buttons
+        self.increase_hand.setText("Starting hand +" + str(1))
+        self.increase_hand.adjustSize()
+        self.increase_word_len.setText("Word len +" + str(1))
+        self.increase_word_len.adjustSize()
+        self.increase_health.setText("Base health +" + str(10 * self.enemy_num))
+        self.increase_health.adjustSize()
+        self.increase_base_dmg.setText("Base damage +" + str(2 * self.enemy_num))
+        self.increase_base_dmg.adjustSize()
+
+        if HINTS:
+            self.update_lbl(qlabel=self.can_words, text=str(self.valid_word_inverse()[:3]))
+
+        self.increase_hand.hide()
+        self.increase_health.hide()
+        self.increase_word_len.hide()
+        self.increase_base_dmg.hide()
+
+        self.update()
 
 # TODO:
 #  1. Player healthbar

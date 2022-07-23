@@ -35,3 +35,7 @@ class Healthbar:
         # keeps health in range of 0 to full health
         self.current_health = min(max(self.current_health - damage, 0), self.initial_health)
         return self.current_health == 0
+
+    def reset_heatlh(self, new_max_health: int):
+        self.current_health = new_max_health
+        self.initial_health = new_max_health

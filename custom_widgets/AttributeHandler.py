@@ -13,7 +13,10 @@ class AttributeHandler:
         exists = False
         for i in range(len(self._attributes)):
             if effect[:-1] in self._attributes[i]:
-                self._attributes[i] = self._attributes[i][:-1] + str(max(self._attributes[i][-1], effect[-1]))
+                if self._attributes[i][-1] == effect[-1]:
+                    self._attributes[i] = self._attributes[i][:-1] + str(int(effect[-1]) + 1)
+                else:
+                    self._attributes[i] = self._attributes[i][:-1] + str(max(self._attributes[i][-1], effect[-1]))
                 exists = True
                 break
         if not exists:

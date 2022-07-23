@@ -23,7 +23,7 @@ class Enemy:
         self.pixmap = QGraphicsPixmapItem()
         scene.addItem(self.pixmap)
         graphics_view.setScene(scene)
-        self.pixmap.setPixmap(QPixmap("assets/enemy.png").scaledToWidth(img_height))
+        self.pixmap.setPixmap(QPixmap(enemy_img).scaledToWidth(img_height))
         graphics_view.move(int(((healthbar.width - healthbar.x) - self.pixmap.pixmap().width()) / 2),
                            int(healthbar.y - img_height))
         graphics_view.setStyleSheet("background:transparent")
@@ -46,6 +46,7 @@ class Enemy:
         attributes = self.attribute_handler.get_attributes()
 
         # handle special effects
+        keep_attributes = False
         for attribute in attributes:
             if "FREZ" in attribute:
                 dmg = 0
@@ -54,9 +55,19 @@ class Enemy:
             elif "WEAK" in attribute:
                 dmg = (dmg / int(attribute[-1]))
             elif "PARA" in attribute:
-                pass
+                dmg = 0
+                keep_attributes = True
 
-        self.attribute_handler.clear_attributes()
+        if not keep_attributes:
+            self.attribute_handler.clear_attributes()
 
         self.pixmap.setPixmap(QPixmap("assets/enemy.png").scaledToWidth(self.img_height))
         return dmg
+
+    def is_dead(self):
+        return self.healthbar.current_health == 0
+
+    def reset(self, new_max_health: int, new_base_damage: int):
+        self.healthbar.reset_heatlh(new_max_health=new_max_health)
+        self.base_dmg = new_base_damage
+        self.attribute_handler.clear_attributes()
