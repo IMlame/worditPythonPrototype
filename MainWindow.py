@@ -367,7 +367,7 @@ class MainWindow(QWidget):
                              healthbar=Healthbar(window=self, x=0, y=self.height() - 300, width=480, height=50,
                                                  initial_health=self.base_health, color=Qt.blue))
         # enemy object
-        self.enemy = Enemy(window=self, enemy_img="assets/enemy.png", img_height=150,
+        self.enemy = Enemy(window=self, enemy_num=self.enemy_num, img_height=150,
                            healthbar=Healthbar(window=self, x=0, y=self.height() - 50, width=480, height=50,
                                                initial_health=1 * self.enemy_num, color=Qt.red), base_dmg = 5 * self.enemy_num)
 
@@ -481,7 +481,7 @@ class MainWindow(QWidget):
         self.table.updateColor(cur_word=self.cur_word)
 
         self.player.reset(self.base_health)
-        self.enemy.reset(new_max_health=25 * self.enemy_num, new_base_damage=5 * self.enemy_num)
+        self.enemy.reset(enemy_num=self.enemy_num, new_max_health=25 * self.enemy_num, new_base_damage=5 * self.enemy_num)
 
         # update things that change when the round resets
         self.update_lbl(self.current_damage_label, str(self.base_damage))
