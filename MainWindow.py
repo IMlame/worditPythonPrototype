@@ -177,6 +177,8 @@ class MainWindow(QWidget):
             self.deck.append("4")
             self.reset_round()
 
+        self.update()
+
     def paintEvent(self, e):
         self.enemy.update()
         self.player.update()
@@ -277,7 +279,7 @@ class MainWindow(QWidget):
             if text == "0" or text == "End Turn":
                 qlabel.setStyleSheet("color: red")
             else:
-                qlabel.setStyleSheet("color: black")
+                qlabel.setStyleSheet("")
         qlabel.setText(text)
         qlabel.adjustSize()
 
@@ -460,7 +462,7 @@ class MainWindow(QWidget):
 
         self.player.damage(self.enemy.attack())
         # test if burn damage kills enemy
-        if self.enemy.is_dead():
+        if self.enemy.is_dead() and not self.player.is_dead():
             self.show_buttons()
 
         self.update()
